@@ -41,7 +41,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✔ TikTok
 ✔ Facebook
 ✔ Instagram
-✔ YouTube
 
 🔗 শুধু ভিডিও লিংক পাঠান
 
@@ -64,9 +63,14 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function
+# 🎬 Download function (FINAL FIXED)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
+
+    # ✅ Only allow TikTok / FB / IG
+    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
+        await update.message.reply_text("❌ শুধু TikTok / Facebook / Instagram link দিন!")
+        return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
@@ -78,13 +82,23 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'format': 'bestvideo+bestaudio/best',
         'quiet': True,
         'noplaylist': True,
-        'merge_output_format': 'mp4'
+        'merge_output_format': 'mp4',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0'
+        }
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_name = ydl.prepare_filename(info)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
+        except Exception:
+            # 🔥 fallback
+            ydl_opts['format'] = 'best'
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
 
         if not file_name.endswith(".mp4"):
             file_name = file_name.rsplit(".", 1)[0] + ".mp4"
