@@ -1,5 +1,5 @@
 import os
-import yt_dlp
+import requests
 import uuid
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
@@ -21,6 +21,7 @@ def save_user(user_id):
             f.write(str(user_id) + "\n")
 
 
+# ✅ Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user.id)
@@ -41,6 +42,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """)
 
 
+# 👥 Users
 async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -54,10 +56,10 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
+# 🎬 Download (API)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    # ignore random text
     if ("tiktok.com" not in url and
         "facebook.com" not in url and
         "fb.watch" not in url and
@@ -66,38 +68,20 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
-    unique_id = str(uuid.uuid4())
-    filename = f"video_{unique_id}.%(ext)s"
-
-    ydl_opts = {
-        'outtmpl': filename,
-        'format': 'bestvideo+bestaudio/best',
-        'merge_output_format': 'mp4',
-        'quiet': True,
-        'noplaylist': True,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0'
-        },
-
-        # 🔥 Instagram FIX
-        'cookiefile': 'cookies.txt'
-    }
-
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_name = ydl.prepare_filename(info)
+        # 🔥 API call
+        api = f"https://api.douyin.wtf/api?url={url}"
+        res = requests.get(api).json()
 
-        if not file_name.endswith(".mp4"):
-            file_name = file_name.rsplit(".", 1)[0] + ".mp4"
+        video_url = res.get("data", {}).get("play")
 
-        with open(file_name, 'rb') as f:
-            await update.message.reply_video(f)
+        if not video_url:
+            raise Exception("No video")
 
-        os.remove(file_name)
+        await update.message.reply_video(video_url)
 
-    except Exception as e:
-        await msg.edit_text("❌ Instagram video ডাউনলোড failed!")
+    except Exception:
+        await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
 
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
