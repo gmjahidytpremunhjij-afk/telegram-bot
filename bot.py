@@ -1,17 +1,14 @@
 import os
-import requests
+import yt_dlp
+import uuid
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
-# 🔑 ENV থেকে নিবে
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-API_KEY = os.getenv("API_KEY")
-
 ADMIN_ID = 7454180235
 USERS_FILE = "users.txt"
 
 
-# 👉 user save
 def save_user(user_id):
     if not os.path.exists(USERS_FILE):
         open(USERS_FILE, "w").close()
@@ -24,7 +21,7 @@ def save_user(user_id):
             f.write(str(user_id) + "\n")
 
 
-# ✅ Start command
+# ✅ Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user.id)
@@ -38,14 +35,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✔ TikTok
 ✔ Facebook
 ✔ Instagram
+✔ YouTube
 
 🔗 শুধু ভিডিও লিংক পাঠান
-
-👨‍💻 তৈরি করেছে: @JAHIDVAI12
 """)
 
 
-# 👥 Users (admin only)
+# 👥 Users
 async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -59,46 +55,52 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function (FINAL)
+# 🎬 Download
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    # ❌ hi/hello ignore
-    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
+    # ❌ ignore hi / hello
+    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com", "youtube.com", "youtu.be"]):
         return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
-    try:
-        api_url = f"https://api.fastsaver.io/fetch?url={url}"
+    filename = f"video_{uuid.uuid4()}.%(ext)s"
 
-        headers = {
-            "X-Api-Key": API_KEY
+    ydl_opts = {
+        'outtmpl': filename,
+        'format': 'bestvideo+bestaudio/best',
+        'merge_output_format': 'mp4',
+        'quiet': True,
+        'noplaylist': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0'
         }
+    }
 
-        res = requests.get(api_url, headers=headers)
-        data = res.json()
+    # 🔥 Instagram fix
+    if "instagram.com" in url:
+        ydl_opts['cookiefile'] = 'cookies.txt'
 
-        print(data)  # debug (Railway logs এ দেখবে)
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            file_name = ydl.prepare_filename(info)
 
-        if not data.get("ok"):
-            await msg.edit_text("❌ ভিডিও পাওয়া যায়নি!")
-            return
+        if not file_name.endswith(".mp4"):
+            file_name = file_name.rsplit(".", 1)[0] + ".mp4"
 
-        video_url = data.get("download_url")
+        with open(file_name, 'rb') as f:
+            await update.message.reply_video(f)
 
-        if not video_url:
-            await msg.edit_text("❌ video link পাওয়া যায়নি!")
-            return
-
-        await update.message.reply_video(video_url)
+        os.remove(file_name)
 
     except Exception as e:
         print(e)
-        await msg.edit_text("❌ ডাউনলোড failed!")
+        await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
 
 
-# 🚀 App run
+# 🚀 Run
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
