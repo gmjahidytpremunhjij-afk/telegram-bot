@@ -1,5 +1,4 @@
 import os
-import yt_dlp
 import uuid
 import requests
 from telegram import Update
@@ -58,54 +57,27 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function (FINAL)
+# 🎬 Download function (FINAL FIX)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    # ❌ ignore hi/hello/random text
+    # ❌ ignore hi / hello / random text
     if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
         return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
     try:
-        # 🔥 Instagram → API
-        if "instagram.com" in url:
-            api = f"https://api.douyin.wtf/api?url={url}"
-            res = requests.get(api).json()
+        # 🔥 ALL IN ONE API (TikTok + FB + IG)
+        api = f"https://api.vxtiktok.com/?url={url}"
+        res = requests.get(api).json()
 
-            video = res.get("data", {}).get("play")
+        video = res.get("video") or res.get("data", {}).get("play")
 
-            if not video:
-                raise Exception("IG fail")
+        if not video:
+            raise Exception("fail")
 
-            await update.message.reply_video(video)
-
-        else:
-            # 🔥 TikTok + Facebook → yt-dlp
-            filename = f"video_{uuid.uuid4()}.%(ext)s"
-
-            ydl_opts = {
-                'outtmpl': filename,
-                'format': 'best',
-                'quiet': True,
-                'noplaylist': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0'
-                }
-            }
-
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                file_name = ydl.prepare_filename(info)
-
-            if not file_name.endswith(".mp4"):
-                file_name = file_name.rsplit(".", 1)[0] + ".mp4"
-
-            with open(file_name, 'rb') as f:
-                await update.message.reply_video(f)
-
-            os.remove(file_name)
+        await update.message.reply_video(video)
 
     except Exception:
         await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
