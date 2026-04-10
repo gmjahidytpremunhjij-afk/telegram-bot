@@ -79,16 +79,26 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     ydl_opts = {
         'outtmpl': filename,
-        'format': 'bestvideo+bestaudio/best',  # 🔥 audio fix
+        'format': 'bestvideo+bestaudio/best',
         'quiet': True,
         'noplaylist': True,
-        'merge_output_format': 'mp4'
+        'merge_output_format': 'mp4',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0'
+        }
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_name = ydl.prepare_filename(info)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
+        except Exception:
+            # 🔥 fallback
+            ydl_opts['format'] = 'best'
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
 
         if not file_name.endswith(".mp4"):
             file_name = file_name.rsplit(".", 1)[0] + ".mp4"
