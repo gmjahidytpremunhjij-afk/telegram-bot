@@ -7,36 +7,73 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, fil
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = 7454180235
+USERS_FILE = "users.txt"
 
 
+# 👉 Save user
+def save_user(user_id):
+    if not os.path.exists(USERS_FILE):
+        open(USERS_FILE, "w").close()
+
+    with open(USERS_FILE, "r") as f:
+        users = f.read().splitlines()
+
+    if str(user_id) not in users:
+        with open(USERS_FILE, "a") as f:
+            f.write(str(user_id) + "\n")
+
+
+# ✅ Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    name = user.username if user.username else user.first_name
+    save_user(user.id)
+
+    username = user.username if user.username else user.first_name
 
     await update.message.reply_text(f"""
-👋 আসসালামু আলাইকুম {name}!
+👋 আসসালামু আলাইকুম {username} স্যার!
 
+📥 Download supported:
 ✔ TikTok
 ✔ Facebook
 ✔ Instagram
 
-🔗 শুধু ভিডিও লিংক দিন
+🔗 শুধু ভিডিও লিংক পাঠান
+
+👨‍💻 তৈরি করেছে: @JAHIDVAI12
 """)
 
 
-async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 👥 Users (admin only)
+async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    if not os.path.exists(USERS_FILE):
+        count = 0
+    else:
+        with open(USERS_FILE, "r") as f:
+            count = len(f.readlines())
+
+    await update.message.reply_text(f"👥 Total Users: {count}")
+
+
+# 🎬 Download function (FINAL)
+async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
+    # ❌ ignore hi/hello/random text
     if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
         return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
     try:
-        # 🔥 Instagram = API
+        # 🔥 Instagram → API
         if "instagram.com" in url:
             api = f"https://api.douyin.wtf/api?url={url}"
             res = requests.get(api).json()
+
             video = res.get("data", {}).get("play")
 
             if not video:
@@ -45,14 +82,17 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_video(video)
 
         else:
-            # 🔥 TikTok + Facebook = yt-dlp
+            # 🔥 TikTok + Facebook → yt-dlp
             filename = f"video_{uuid.uuid4()}.%(ext)s"
 
             ydl_opts = {
                 'outtmpl': filename,
                 'format': 'best',
                 'quiet': True,
-                'noplaylist': True
+                'noplaylist': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0'
+                }
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -71,10 +111,12 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
 
 
+# 🚀 Run bot
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download))
+app.add_handler(CommandHandler("users", users))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
 print("✅ Bot Running...")
 app.run_polling()
