@@ -3,14 +3,18 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
+# 🔑 ENV TOKEN
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+API_KEY = os.getenv("API_KEY")
 
+# 👑 Admin ID
 ADMIN_ID = 7454180235
+
+# 📁 user file
 USERS_FILE = "users.txt"
 
-API_KEY = "fs_sk_3r9d6r9k7i0j3x9u6e7j1k0g9n0k"   # এখানে তোমার FastSaver API key বসাও
 
-
+# 👉 user save
 def save_user(user_id):
     if not os.path.exists(USERS_FILE):
         open(USERS_FILE, "w").close()
@@ -23,6 +27,7 @@ def save_user(user_id):
             f.write(str(user_id) + "\n")
 
 
+# ✅ Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user.id)
@@ -44,6 +49,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 
+# 👥 User count (admin only)
 async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -57,11 +63,13 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
+# 🎬 Download function
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
+    # ❌ hi / hello ignore (no reply)
     if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
-        return  # ❌ hi hello ignore
+        return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
@@ -79,7 +87,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.edit_text("❌ ভিডিও পাওয়া যায়নি!")
             return
 
-        video_url = data["data"]["download_url"]
+        video_url = data["download_url"]
 
         await update.message.reply_video(video_url)
 
@@ -87,6 +95,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text("❌ ডাউনলোড failed!")
 
 
+# 🚀 App
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
