@@ -1,61 +1,121 @@
 import os
-import requests
+import yt_dlp
+import uuid
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
+# 🔑 ENV token
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# 👑 Admin ID
+ADMIN_ID = 7454180235
+
+# 📁 user file
+USERS_FILE = "users.txt"
+
+
+# 👉 user save
+def save_user(user_id):
+    if not os.path.exists(USERS_FILE):
+        open(USERS_FILE, "w").close()
+
+    with open(USERS_FILE, "r") as f:
+        users = f.read().splitlines()
+
+    if str(user_id) not in users:
+        with open(USERS_FILE, "a") as f:
+            f.write(str(user_id) + "\n")
+
+
+# ✅ Start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    name = user.username if user.username else user.first_name
+    save_user(user.id)
 
-    await update.message.reply_text(f"""
-👋 আসসালামু আলাইকুম {name}!
+    username = user.username if user.username else user.first_name
 
+    text = f"""
+👋 আসসালামু আলাইকুম {username} স্যার!
+
+📥 আপনি এখান থেকে ডাউনলোড করতে পারবেন:
 ✔ TikTok
 ✔ Facebook
 ✔ Instagram
 
-🔗 শুধু ভিডিও লিংক দিন
-""")
+🔗 শুধু ভিডিও লিংক পাঠান
+
+👨‍💻 তৈরি করেছে: @JAHIDVAI12
+"""
+    await update.message.reply_text(text)
 
 
-async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 👥 User count (admin only)
+async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    if not os.path.exists(USERS_FILE):
+        count = 0
+    else:
+        with open(USERS_FILE, "r") as f:
+            count = len(f.readlines())
+
+    await update.message.reply_text(f"👥 Total Users: {count}")
+
+
+# 🎬 Download function
+async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    if ("tiktok.com" not in url and
-        "facebook.com" not in url and
-        "fb.watch" not in url and
-        "instagram.com" not in url):
+    # ❌ hi / hello / random text → ignore
+    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
         return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
+    unique_id = str(uuid.uuid4())
+    filename = f"video_{unique_id}.%(ext)s"
+
+    ydl_opts = {
+        'outtmpl': filename,
+        'format': 'bestvideo+bestaudio/best',
+        'quiet': True,
+        'noplaylist': True,
+        'merge_output_format': 'mp4',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0'
+        }
+    }
+
     try:
-        # 🔥 API 1
-        api1 = f"https://api.douyin.wtf/api?url={url}"
-        r1 = requests.get(api1).json()
-        video = r1.get("data", {}).get("play")
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
+        except Exception:
+            ydl_opts['format'] = 'best'
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                file_name = ydl.prepare_filename(info)
 
-        # 🔁 fallback API 2
-        if not video:
-            api2 = f"https://tikwm.com/api/?url={url}"
-            r2 = requests.get(api2).json()
-            video = r2.get("data", {}).get("play")
+        if not file_name.endswith(".mp4"):
+            file_name = file_name.rsplit(".", 1)[0] + ".mp4"
 
-        if not video:
-            raise Exception("fail")
+        with open(file_name, 'rb') as f:
+            await update.message.reply_video(f)
 
-        await update.message.reply_video(video)
+        os.remove(file_name)
 
     except Exception:
         await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
 
 
+# 🚀 App
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download))
+app.add_handler(CommandHandler("users", users))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
 
 print("✅ Bot Running...")
 app.run_polling()
