@@ -63,14 +63,13 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function (FINAL FIXED)
+# 🎬 Download function (FINAL CLEAN)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text.strip()
+    url = update.message.text.strip().lower()
 
-    # ✅ Only allow TikTok / FB / IG
+    # ✅ Only allow valid links
     if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
-        await update.message.reply_text("❌ শুধু TikTok / Facebook / Instagram link দিন!")
-        return
+        return  # ❌ ignore hi/hello বা random text
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
