@@ -3,14 +3,11 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
-# 🔑 ENV TOKEN
+# 🔑 ENV থেকে নিবে
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY = os.getenv("API_KEY")
 
-# 👑 Admin ID
 ADMIN_ID = 7454180235
-
-# 📁 user file
 USERS_FILE = "users.txt"
 
 
@@ -27,14 +24,14 @@ def save_user(user_id):
             f.write(str(user_id) + "\n")
 
 
-# ✅ Start
+# ✅ Start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user.id)
 
     username = user.username if user.username else user.first_name
 
-    text = f"""
+    await update.message.reply_text(f"""
 👋 আসসালামু আলাইকুম {username} স্যার!
 
 📥 Download supported:
@@ -45,11 +42,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔗 শুধু ভিডিও লিংক পাঠান
 
 👨‍💻 তৈরি করেছে: @JAHIDVAI12
-"""
-    await update.message.reply_text(text)
+""")
 
 
-# 👥 User count (admin only)
+# 👥 Users (admin only)
 async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -63,11 +59,11 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function
+# 🎬 Download function (FINAL)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    # ❌ hi / hello ignore (no reply)
+    # ❌ hi/hello ignore
     if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
         return
 
@@ -77,25 +73,32 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
         api_url = f"https://api.fastsaver.io/fetch?url={url}"
 
         headers = {
-            "x-api-key": API_KEY
+            "X-Api-Key": API_KEY
         }
 
         res = requests.get(api_url, headers=headers)
         data = res.json()
 
+        print(data)  # debug (Railway logs এ দেখবে)
+
         if not data.get("ok"):
             await msg.edit_text("❌ ভিডিও পাওয়া যায়নি!")
             return
 
-        video_url = data["download_url"]
+        video_url = data.get("download_url")
+
+        if not video_url:
+            await msg.edit_text("❌ video link পাওয়া যায়নি!")
+            return
 
         await update.message.reply_video(video_url)
 
-    except Exception:
+    except Exception as e:
+        print(e)
         await msg.edit_text("❌ ডাউনলোড failed!")
 
 
-# 🚀 App
+# 🚀 App run
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
