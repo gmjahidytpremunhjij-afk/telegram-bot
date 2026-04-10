@@ -4,11 +4,16 @@ import uuid
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
+# 🔑 ENV থেকে token
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+# 👑 তোমার Admin ID
 ADMIN_ID = 7454180235
+
+# 📁 user file
 USERS_FILE = "users.txt"
 
-
+# 👉 user save function
 def save_user(user_id):
     if not os.path.exists(USERS_FILE):
         open(USERS_FILE, "w").close()
@@ -21,27 +26,30 @@ def save_user(user_id):
             f.write(str(user_id) + "\n")
 
 
-# ✅ Start
+# ✅ Start Command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+
+    # user save
     save_user(user.id)
 
     username = user.username if user.username else user.first_name
 
-    await update.message.reply_text(f"""
+    text = f"""
 👋 আসসালামু আলাইকুম {username} স্যার!
 
-📥 Download supported:
+📥 আপনি এখান থেকে ডাউনলোড করতে পারবেন:
 ✔ TikTok
-✔ Facebook
-✔ Instagram
-✔ YouTube
+✔ Facebook Short Video
 
 🔗 শুধু ভিডিও লিংক পাঠান
-""")
+
+👨‍💻 আমাকে তৈরি করেছে: @JAHIDVAI12
+"""
+    await update.message.reply_text(text)
 
 
-# 👥 Users
+# 👥 Users count (admin only)
 async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
@@ -55,52 +63,36 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download
+# 🎬 Video Download
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
 
-    # ❌ ignore hi / hello
-    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com", "youtube.com", "youtu.be"]):
-        return
+    msg = await update.message.reply_text("⏳ ডাউনলোড হচ্ছে...")
 
-    msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
-
-    filename = f"video_{uuid.uuid4()}.%(ext)s"
+    unique_id = str(uuid.uuid4())
+    filename = f"video_{unique_id}.mp4"
 
     ydl_opts = {
         'outtmpl': filename,
-        'format': 'bestvideo+bestaudio/best',
-        'merge_output_format': 'mp4',
+        'format': 'best',
         'quiet': True,
-        'noplaylist': True,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0'
-        }
+        'noplaylist': True
     }
-
-    # 🔥 Instagram fix
-    if "instagram.com" in url:
-        ydl_opts['cookiefile'] = 'cookies.txt'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            file_name = ydl.prepare_filename(info)
+            ydl.download([url])
 
-        if not file_name.endswith(".mp4"):
-            file_name = file_name.rsplit(".", 1)[0] + ".mp4"
-
-        with open(file_name, 'rb') as f:
+        with open(filename, 'rb') as f:
             await update.message.reply_video(f)
 
-        os.remove(file_name)
+        os.remove(filename)
 
-    except Exception as e:
-        print(e)
+    except Exception:
         await msg.edit_text("❌ ভিডিও ডাউনলোড করা যায়নি!")
 
 
-# 🚀 Run
+# 🚀 App Setup
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
