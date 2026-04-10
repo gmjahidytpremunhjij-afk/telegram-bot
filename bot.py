@@ -41,7 +41,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ✔ TikTok
 ✔ Facebook
 ✔ Instagram
-✔ YouTube
 
 🔗 শুধু ভিডিও লিংক পাঠান
 
@@ -64,9 +63,14 @@ async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"👥 Total Users: {count}")
 
 
-# 🎬 Download function
+# 🎬 Download function (FINAL FIXED)
 async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     url = update.message.text.strip()
+
+    # ✅ Only allow TikTok / FB / IG
+    if not any(x in url for x in ["tiktok.com", "facebook.com", "fb.watch", "instagram.com"]):
+        await update.message.reply_text("❌ শুধু TikTok / Facebook / Instagram link দিন!")
+        return
 
     msg = await update.message.reply_text("⏳ প্রসেস হচ্ছে...")
 
@@ -75,7 +79,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     ydl_opts = {
         'outtmpl': filename,
-        'format': 'bestvideo+bestaudio/best',
+        'format': 'bestvideo+bestaudio/best',  # 🔥 audio fix
         'quiet': True,
         'noplaylist': True,
         'merge_output_format': 'mp4'
