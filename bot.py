@@ -1,103 +1,55 @@
-import os
+import telebot
 import yt_dlp
-import uuid
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
+import os
 
-# ðŸ”‘ ENV à¦¥à§‡à¦•à§‡ token
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "YOUR_BOT_TOKEN"
+bot = telebot.TeleBot(TOKEN)
 
-# ðŸ'' à¦¤à§‹à¦®à¦¾à¦° Admin ID
-ADMIN_ID = 7454180235
+# START MESSAGE
+@bot.message_handler(commands=['start'])
+def start(message):
+    name = message.from_user.first_name
+    text = f"""👋 আসসালামু আলাইকুম {name} স্যার!
 
-# ðŸ“ user file
-USERS_FILE = "users.txt"
+📥 আপনি এখান থেকে ডাউনলোড করতে পারবেন:
+✔ TikTok
+✔ Facebook Video
+✔ YouTube
+✔ Instagram
 
-# ðŸ‘‰ user save function
-def save_user(user_id):
-    if not os.path.exists(USERS_FILE):
-        open(USERS_FILE, "w").close()
+🔗 শুধু ভিডিও লিংক পাঠান
 
-    with open(USERS_FILE, "r") as f:
-        users = f.read().splitlines()
-
-    if str(user_id) not in users:
-        with open(USERS_FILE, "a") as f:
-            f.write(str(user_id) + "\n")
-
-
-# âœ… Start Command
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-
-    # user save
-    save_user(user.id)
-
-    username = user.username if user.username else user.first_name
-
-    text = f"""
-ðŸ‘‹ à¦†à¦¸à¦¸à¦¾à¦²à¦¾à¦®à§ à¦†à¦²à¦¾à¦‡à¦•à§à¦® {username} à¦¸à§à¦¯à¦¾à¦°!
-
-ðŸ“¥ à¦†à¦ªà¦¨à¦¿ à¦ à¦–à¦¾à¦¨ à¦¥à§‡à¦•à§‡ à¦¡à¦¾à¦‰à¦¨à¦²à§‹à¦¡ à¦•à¦°à¦¤à§‡ à¦ªà¦¾à¦°à¦¬à§‡à¦¨:
-âœ” TikTok
-âœ” Facebook Short Video
-
-ðŸ”— à¦¶à§ à¦§à§ à¦à¦¿à¦¡à¦¿à¦“ à¦²à¦¿à¦‚à¦• à¦ªà¦¾à¦ à¦¾à¦¨
-
-ðŸ'¨â€ ðŸ'» à¦†à¦®à¦¾à¦•à§‡ à¦¤à§ˆà¦°à¦¿ à¦•à¦°à§‡à¦›à§‡: @JAHIDVAI12
+👨‍💻 আমাকে তৈরি করেছে: @JAHIDVAI12
 """
-    await update.message.reply_text(text)
+    bot.reply_to(message, text)
 
-
-# ðŸ‘¥ Users count (admin only)
-async def users(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-
-    if not os.path.exists(USERS_FILE):
-        count = 0
-    else:
-        with open(USERS_FILE, "r") as f:
-            count = len(f.readlines())
-
-    await update.message.reply_text(f"ðŸ‘¥ Total Users: {count}")
-
-
-# ðŸŽ¬ Video Download
-async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text.strip()
-
-    msg = await update.message.reply_text("â³ à¦¡à¦¾à¦‰à¦¨à¦²à§‹à¦¡ à¦¹à¦šà§à¦›à§‡...")
-
-    unique_id = str(uuid.uuid4())
-    filename = f"video_{unique_id}.mp4"
-
-    ydl_opts = {
-        'outtmpl': filename,
-        'format': 'best',
-        'quiet': True,
-        'noplaylist': True
-    }
+# DOWNLOAD FUNCTION
+@bot.message_handler(func=lambda message: True)
+def download_video(message):
+    url = message.text
 
     try:
+        msg = bot.reply_to(message, "⏳ ডাউনলোড হচ্ছে...")
+
+        ydl_opts = {
+            'format': 'best[ext=mp4]/best',
+            'outtmpl': '%(id)s.%(ext)s',
+            'noplaylist': True,
+            'quiet': True
+        }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            info = ydl.extract_info(url, download=True)
+            file_name = ydl.prepare_filename(info)
 
-        with open(filename, 'rb') as f:
-            await update.message.reply_video(f)
+        # SEND VIDEO
+        with open(file_name, 'rb') as video:
+            bot.send_video(message.chat.id, video)
 
-        os.remove(filename)
+        # DELETE FILE AFTER SEND
+        os.remove(file_name)
 
-    except Exception:
-        await msg.edit_text("âŒ à¦­à¦¿à¦¡à¦¿à¦“ à¦¡à¦¾à¦‰à¦¨à¦²à§‹à¦¡ à¦•à¦°à¦¾ à¦¯à¦¾à§Ÿà¦¨à¦¿!")
+    except Exception as e:
+        bot.reply_to(message, f"❌ ডাউনলোড করা যায়নি!\n{str(e)}")
 
-
-# ðŸš€ App Setup
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("users", users))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-
-print("âœ… Bot Running...")
-app.run_polling()
+bot.infinity_polling()
