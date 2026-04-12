@@ -22,7 +22,7 @@ def start(message):
 🔗 শুধু ভিডিও লিংক পাঠান
 """)
 
-# ✅ LINK CHECK FUNCTION (FINAL FIX)
+# LINK CHECK FUNCTION
 def is_link(message):
     return message.text is not None and message.text.startswith("http")
 
