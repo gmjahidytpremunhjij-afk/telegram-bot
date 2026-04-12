@@ -22,7 +22,7 @@ def start(message):
 👨‍💻 আমাকে তৈরি করেছে: @JAHIDVAI12
 """)
 
-# ✅ FIXED LINK HANDLER
+# ✅ ONLY LINK WORK করবে
 @bot.message_handler(func=lambda message: message.text and message.text.startswith("http"))
 def download_video(message):
     url = message.text
@@ -33,8 +33,7 @@ def download_video(message):
         ydl_opts = {
             'format': 'best[ext=mp4]/best',
             'outtmpl': '%(id)s.%(ext)s',
-            'noplaylist': True,
-            'quiet': True
+            'noplaylist': True
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
