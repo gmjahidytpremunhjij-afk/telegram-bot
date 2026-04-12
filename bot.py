@@ -2,16 +2,14 @@ import telebot
 import yt_dlp
 import os
 
-# TOKEN from Railway
 TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
 
-# START COMMAND
 @bot.message_handler(commands=['start'])
 def start(message):
     name = message.from_user.first_name
-    text = f"""👋 আসসালামু আলাইকুম {name} স্যার!
+    bot.reply_to(message, f"""👋 আসসালামু আলাইকুম {name} স্যার!
 
 📥 আপনি এখান থেকে ডাউনলোড করতে পারবেন:
 ✔ TikTok
@@ -22,10 +20,9 @@ def start(message):
 🔗 শুধু ভিডিও লিংক পাঠান
 
 👨‍💻 আমাকে তৈরি করেছে: @JAHIDVAI12
-"""
-    bot.reply_to(message, text)
+""")
 
-# ONLY LINK HANDLER (FIXED)
+# ✅ FIXED LINK HANDLER
 @bot.message_handler(func=lambda message: message.text and message.text.startswith("http"))
 def download_video(message):
     url = message.text
@@ -50,7 +47,6 @@ def download_video(message):
         os.remove(file_name)
 
     except Exception as e:
-        print(e)  # debug log (Railway logs এ দেখাবে)
+        print(e)
 
-# RUN
 bot.infinity_polling()
