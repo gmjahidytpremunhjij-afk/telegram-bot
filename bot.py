@@ -2,7 +2,7 @@ import telebot
 import yt_dlp
 import os
 
-# TOKEN from Railway
+# TOKEN from Railway / ENV
 TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
@@ -11,28 +11,19 @@ bot = telebot.TeleBot(TOKEN)
 @bot.message_handler(commands=['start'])
 def start(message):
     name = message.from_user.first_name
-    bot.reply_to(message, f"""👋 আসসালামু আলাইকুম {name} স্যার!
-
-📥 আপনি এখান থেকে ডাউনলোড করতে পারবেন:
-✔ TikTok
-✔ Facebook Video
-✔ YouTube
-✔ Instagram
-
-🔗 শুধু ভিডিও লিংক পাঠান
-""")
+    bot.reply_to(message, f"👋 আসসালামু আলাইকুম {name}!\n\nআপনি এখন ভিডিও ডাউনলোড করতে পারবেন:\n✔ TikTok\n✔ Facebook\n✔ YouTube\n✔ Instagram\n\n🔗 শুধু ভিডিও লিংক পাঠান")
 
 # LINK CHECK FUNCTION
 def is_link(message):
     return message.text is not None and message.text.startswith("http")
 
-# ✅ DOWNLOAD HANDLER
+# DOWNLOAD HANDLER
 @bot.message_handler(func=is_link)
 def download_video(message):
     url = message.text
 
     try:
-        bot.reply_to(message, "⏳ ডাউনলোড হচ্ছে...")
+        bot.reply_to(message, "⏬ ডাউনলোড হচ্ছে...")
 
         ydl_opts = {
             'format': 'best',
@@ -51,6 +42,7 @@ def download_video(message):
 
     except Exception as e:
         print(e)
+        bot.reply_to(message, "❌ ডাউনলোড করতে সমস্যা হয়েছে!")
 
 # RUN BOT
 bot.infinity_polling()
