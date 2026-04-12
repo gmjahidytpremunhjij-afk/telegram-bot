@@ -2,7 +2,7 @@ import telebot
 import yt_dlp
 import os
 
-# Railway environment TOKEN
+# Railway TOKEN
 TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
@@ -53,5 +53,5 @@ def download_video(message):
     except Exception as e:
         print(e)
 
-# RUN BOT
+# RUN
 bot.infinity_polling()
