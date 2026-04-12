@@ -24,10 +24,11 @@ def start(message):
 👨‍💻 আমাকে তৈরি করেছে: @JAHIDVAI12
 """)
 
-# ✅ ONLY LINK HANDLER (FIXED)
+# ✅ LINK CHECK FUNCTION (FIXED)
 def is_link(message):
     return message.text and message.text.startswith("http")
 
+# ✅ DOWNLOAD HANDLER
 @bot.message_handler(func=is_link)
 def download_video(message):
     url = message.text
@@ -53,5 +54,5 @@ def download_video(message):
     except Exception as e:
         print(e)
 
-# RUN
+# RUN BOT
 bot.infinity_polling()
