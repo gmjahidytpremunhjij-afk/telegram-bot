@@ -2,10 +2,10 @@ import telebot
 import yt_dlp
 import os
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = os.getenv("TOKEN")  # 🔥 environment থেকে token নেবে
 bot = telebot.TeleBot(TOKEN)
 
-# START MESSAGE
+# START COMMAND
 @bot.message_handler(commands=['start'])
 def start(message):
     name = message.from_user.first_name
@@ -23,13 +23,13 @@ def start(message):
 """
     bot.reply_to(message, text)
 
-# DOWNLOAD FUNCTION
-@bot.message_handler(func=lambda message: True)
+# ONLY LINK HANDLER
+@bot.message_handler(func=lambda message: message.text and message.text.startswith("http"))
 def download_video(message):
     url = message.text
 
     try:
-        msg = bot.reply_to(message, "⏳ ডাউনলোড হচ্ছে...")
+        bot.reply_to(message, "⏳ ডাউনলোড হচ্ছে...")
 
         ydl_opts = {
             'format': 'best[ext=mp4]/best',
@@ -42,14 +42,13 @@ def download_video(message):
             info = ydl.extract_info(url, download=True)
             file_name = ydl.prepare_filename(info)
 
-        # SEND VIDEO
         with open(file_name, 'rb') as video:
             bot.send_video(message.chat.id, video)
 
-        # DELETE FILE AFTER SEND
         os.remove(file_name)
 
-    except Exception as e:
-        bot.reply_to(message, f"❌ ডাউনলোড করা যায়নি!\n{str(e)}")
+    except:
+        pass
 
+# RUN BOT
 bot.infinity_polling()
