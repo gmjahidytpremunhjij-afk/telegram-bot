@@ -2,7 +2,7 @@ import telebot
 import yt_dlp
 import os
 
-# TOKEN from Railway environment
+# TOKEN from Railway
 TOKEN = os.getenv("TOKEN")
 
 bot = telebot.TeleBot(TOKEN)
@@ -25,7 +25,7 @@ def start(message):
 """
     bot.reply_to(message, text)
 
-# ONLY LINK HANDLER (IMPORTANT FIXED)
+# ONLY LINK HANDLER (FIXED)
 @bot.message_handler(func=lambda message: message.text and message.text.startswith("http"))
 def download_video(message):
     url = message.text
@@ -49,8 +49,8 @@ def download_video(message):
 
         os.remove(file_name)
 
-    except:
-        pass  # silent
+    except Exception as e:
+        print(e)  # debug log (Railway logs এ দেখাবে)
 
 # RUN
 bot.infinity_polling()
