@@ -22,11 +22,9 @@ def start(message):
 🔗 শুধু ভিডিও লিংক পাঠান
 """)
 
-# ✅ SAFE LINK CHECK
+# ✅ LINK CHECK FUNCTION (FINAL FIX)
 def is_link(message):
-    if message.text:
-        return message.text.startswith("http")
-    return False
+    return message.text is not None and message.text.startswith("http")
 
 # ✅ DOWNLOAD HANDLER
 @bot.message_handler(func=is_link)
